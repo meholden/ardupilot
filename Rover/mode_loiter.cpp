@@ -57,7 +57,9 @@ void ModeLoiter::update()
     }
 
     // 0 turn rate is no limit
-    float turn_rate = 0.0;
+    //float turn_rate = 0.0;
+    // MEH use pivot turn rate for tacks
+    turn_rate = g2.wp_nav.get_pivot_rate();
 
     // make sure sailboats don't try and sail directly into the wind
     if (g2.sailboat.use_indirect_route(_desired_yaw_cd)) {
