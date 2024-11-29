@@ -190,13 +190,20 @@ void Sailboat::set_pilot_desired_mainsail()
 /// @param[in] desired_speed desired speed (in m/s) only used to detect desired direction
 void Sailboat::set_auto_mainsail(float desired_speed)
 {
-    // use PID controller to sheet out, this number is expected approximately in the 0 to 100 range (with default PIDs)
-    const float pid_offset = rover.g2.attitude_control.get_sail_out_from_heel(radians(sail_heel_angle_max), rover.G_Dt) * 100.0f;
-
     // get apparent wind, + is wind over starboard side, - is wind over port side
     const float wind_dir_apparent = degrees(rover.g2.windvane.get_apparent_wind_direction_rad());
     const float wind_dir_apparent_abs = fabsf(wind_dir_apparent);
     const float wind_dir_apparent_sign = is_negative(wind_dir_apparent) ? -1.0f : 1.0f;
+
+    // max heel set from parameter + flatter if trying to bear away
+    //   read rudder state
+    const float rudder_pct = 0;
+
+    //   if rudder > 50 % and in bear-away direction, try to flatten the boat
+    const float sail_heel_angle_max_bear = sail_heel_angle_max;
+
+    // use PID controller to sheet out, this number is expected approximately in the 0 to 100 range (with default PIDs)
+    const float pid_offset = rover.g2.attitude_control.get_sail_out_from_heel(radians(sail_heel_angle_max), rover.G_Dt) * 100.0f;
 
     //
     // mainsail control.
