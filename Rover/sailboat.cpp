@@ -6,6 +6,7 @@
 #define SAILBOAT_TACKING_ACCURACY_DEG -1        // Forces tack to always use timer.  tack is considered complete when vehicle is within this many degrees of target tack angle
 #define SAILBOAT_NOGO_PAD 10                    // deg, the no go zone is padded by this much when deciding if we should use the Sailboat heading controller
 #define TACK_RETRY_TIME_MS 5000                 // Can only try another auto mode tack this many milliseconds after the last is cleared (either competed or timed-out)
+#define BEAR_AWAY_GAIN 20.0                     // max reduction in max_heel when trying to bear away: this many degrees at full rudder (e.g. if max_heel is 30 and this is 20 then max heel is 10 at max rudder bear away)
 /*
 To Do List
  - Improve tacking in light winds and bearing away in strong wings
@@ -192,13 +193,29 @@ void Sailboat::set_pilot_desired_mainsail()
 /// @param[in] desired_speed desired speed (in m/s) only used to detect desired direction
 void Sailboat::set_auto_mainsail(float desired_speed)
 {
-    // use PID controller to sheet out, this number is expected approximately in the 0 to 100 range (with default PIDs)
-    const float pid_offset = rover.g2.attitude_control.get_sail_out_from_heel(radians(sail_heel_angle_max), rover.G_Dt) * 100.0f;
-
     // get apparent wind, + is wind over starboard side, - is wind over port side
     const float wind_dir_apparent = degrees(rover.g2.windvane.get_apparent_wind_direction_rad());
     const float wind_dir_apparent_abs = fabsf(wind_dir_apparent);
     const float wind_dir_apparent_sign = is_negative(wind_dir_apparent) ? -1.0f : 1.0f;
+
+    // MEH max heel set from parameter + flatter if trying to bear away
+    //   MEH read rudder state +1 to -1 positive is umm right turn??
+    const float rudder_pct = rover.g2.motors.get_steering() / 4500.0; // 
+
+    //   MEH if rudder > 50 % and in bear-away direction, try to flatten the boat
+    float sail_heel_angle_max_bear = sail_heel_angle_max;
+
+    if (fabsf(rudder_pct) > 0.5) {
+        if ((rudder_pct*wind_dir_apparent) > 0) { 
+            // trying to bear away
+            sail_heel_angle_max_bear = sail_heel_angle_max - BEAR_AWAY_GAIN*2.0*(rudder_pct-0.5); // continuous function
+            sail_heel_angle_max_bear = constrain_float(sail_heel_angle_max_bear,0.0,sail_heel_angle_max); // limits
+        }
+    }
+
+    // use PID controller to sheet out, this number is expected approximately in the 0 to 100 range (with default PIDs)
+    const float pid_offset = rover.g2.attitude_control.get_sail_out_from_heel(radians(sail_heel_angle_max_bear), rover.G_Dt) * 100.0f;
+    //const float pid_offset = rover.g2.attitude_control.get_sail_out_from_heel(radians(sail_heel_angle_max), rover.G_Dt) * 100.0f;
 
     //
     // mainsail control.
