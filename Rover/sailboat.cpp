@@ -6,7 +6,7 @@
 #define SAILBOAT_TACKING_ACCURACY_DEG -1        // Forces tack to always use timer.  tack is considered complete when vehicle is within this many degrees of target tack angle
 #define SAILBOAT_NOGO_PAD 10                    // deg, the no go zone is padded by this much when deciding if we should use the Sailboat heading controller
 #define TACK_RETRY_TIME_MS 5000                 // Can only try another auto mode tack this many milliseconds after the last is cleared (either competed or timed-out)
-#define BEAR_AWAY_GAIN 20.0                     // max reduction in max_heel when trying to bear away: this many degrees at full rudder (e.g. if max_heel is 30 and this is 20 then max heel is 10 at max rudder bear away)
+#define BEAR_AWAY_GAIN 15.0                     // max reduction in max_heel when trying to bear away: this many degrees at full rudder (e.g. if max_heel is 30 and this is 20 then max heel is 10 at max rudder bear away)
 /*
 To Do List
  - Improve tacking in light winds and bearing away in strong wings
@@ -206,9 +206,9 @@ void Sailboat::set_auto_mainsail(float desired_speed)
     float sail_heel_angle_max_bear = sail_heel_angle_max;
 
     if (fabsf(rudder_pct) > 0.5) {
-        if ((rudder_pct*wind_dir_apparent) > 0) { 
+        if ((rudder_pct*wind_dir_apparent) < 0) {  // neg*pos=neg
             // trying to bear away
-            sail_heel_angle_max_bear = sail_heel_angle_max - BEAR_AWAY_GAIN*2.0*(rudder_pct-0.5); // continuous function
+            sail_heel_angle_max_bear = sail_heel_angle_max - BEAR_AWAY_GAIN*2.0*(fabsf(rudder_pct)-0.5); // continuous function
             sail_heel_angle_max_bear = constrain_float(sail_heel_angle_max_bear,0.0,sail_heel_angle_max); // limits
         }
     }
