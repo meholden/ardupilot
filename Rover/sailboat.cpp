@@ -6,7 +6,7 @@
 #define SAILBOAT_TACKING_ACCURACY_DEG -1        // Forces tack to always use timer.  tack is considered complete when vehicle is within this many degrees of target tack angle
 #define SAILBOAT_NOGO_PAD 10                    // deg, the no go zone is padded by this much when deciding if we should use the Sailboat heading controller
 #define TACK_RETRY_TIME_MS 5000                 // Can only try another auto mode tack this many milliseconds after the last is cleared (either competed or timed-out)
-#define BEAR_AWAY_GAIN 15.0                     // max reduction in max_heel when trying to bear away: this many degrees at full rudder (e.g. if max_heel is 30 and this is 20 then max heel is 10 at max rudder bear away)
+//#define BEAR_AWAY_GAIN 15.0                     // max reduction in max_heel when trying to bear away: this many degrees at full rudder (e.g. if max_heel is 30 and this is 20 then max heel is 10 at max rudder bear away)
 /*
 To Do List
  - Improve tacking in light winds and bearing away in strong wings
@@ -104,6 +104,15 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("LOIT_RADIUS", 9, Sailboat, loit_radius, 5),
+
+    // @Param: BEAR_AWAY_P
+    // @DisplayName: Bear away gain
+    // @Description: If sailboat is trying to bear away, max heel is reduced by this much at 100% rudder
+    // @Units: deg
+    // @Range: 0 20
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("BEAR_AWAY_P", 10, Sailboat, bear_away_gain, 15),
 
     AP_GROUPEND
 };
@@ -206,7 +215,7 @@ float Sailboat::get_target_heel()
     if (fabsf(rudder) > 0.5) {
         if ((rudder*wind_dir_apparent) < 0) {  // neg*pos=neg
             // trying to bear away
-            sail_heel_angle_max_bear = sail_heel_angle_max - BEAR_AWAY_GAIN*2.0*(fabsf(rudder)-0.5); // continuous function
+            sail_heel_angle_max_bear = sail_heel_angle_max - bear_away_gain*2.0*(fabsf(rudder)-0.5); // continuous function
             sail_heel_angle_max_bear = MAX(0.0, sail_heel_angle_max_bear); // limit
         }
     }
