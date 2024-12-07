@@ -200,16 +200,17 @@ void Sailboat::set_auto_mainsail(float desired_speed)
 
     // MEH max heel set from parameter + flatter if trying to bear away
     //   MEH read rudder state +1 to -1 positive is umm right turn??
-    const float rudder_pct = rover.g2.motors.get_steering() / 4500.0; // 
+    // We don't always calculate the steering before the mainsail, so this may be from the last loop. 
+    const float rudder = rover.g2.motors.get_steering() / 4500.0; // 
 
     //   MEH if rudder > 50 % and in bear-away direction, try to flatten the boat
     float sail_heel_angle_max_bear = sail_heel_angle_max;
 
-    if (fabsf(rudder_pct) > 0.5) {
-        if ((rudder_pct*wind_dir_apparent) < 0) {  // neg*pos=neg
+    if (fabsf(rudder) > 0.5) {
+        if ((rudder*wind_dir_apparent) < 0) {  // neg*pos=neg
             // trying to bear away
-            sail_heel_angle_max_bear = sail_heel_angle_max - BEAR_AWAY_GAIN*2.0*(fabsf(rudder_pct)-0.5); // continuous function
-            sail_heel_angle_max_bear = constrain_float(sail_heel_angle_max_bear,0.0,sail_heel_angle_max); // limits
+            sail_heel_angle_max_bear = sail_heel_angle_max - BEAR_AWAY_GAIN*2.0*(fabsf(rudder)-0.5); // continuous function
+            sail_heel_angle_max_bear = MAX(0.0, sail_heel_angle_max_bear); // limit
         }
     }
 
