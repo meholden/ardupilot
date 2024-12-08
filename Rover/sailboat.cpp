@@ -1,9 +1,9 @@
 #include "Rover.h"
 
 //#define SAILBOAT_AUTO_TACKING_TIMEOUT_MS 5000   // tacks in auto mode timeout if not successfully completed within this many milliseconds
-#define SAILBOAT_AUTO_TACKING_TIMEOUT_MS 8000   // N4N1 needs longer to tack. tacks in auto mode timeout if not successfully completed within this many milliseconds
+//#define SAILBOAT_AUTO_TACKING_TIMEOUT_MS 8000   // N4N1 needs longer to tack. tacks in auto mode timeout if not successfully completed within this many milliseconds
 //#define SAILBOAT_TACKING_ACCURACY_DEG 10        // tack is considered complete when vehicle is within this many degrees of target tack angle
-#define SAILBOAT_TACKING_ACCURACY_DEG -1        // Forces tack to always use timer.  tack is considered complete when vehicle is within this many degrees of target tack angle
+//#define SAILBOAT_TACKING_ACCURACY_DEG -1        // Forces tack to always use timer.  tack is considered complete when vehicle is within this many degrees of target tack angle
 #define SAILBOAT_NOGO_PAD 10                    // deg, the no go zone is padded by this much when deciding if we should use the Sailboat heading controller
 #define TACK_RETRY_TIME_MS 5000                 // Can only try another auto mode tack this many milliseconds after the last is cleared (either competed or timed-out)
 //#define BEAR_AWAY_GAIN 15.0                     // max reduction in max_heel when trying to bear away: this many degrees at full rudder (e.g. if max_heel is 30 and this is 20 then max heel is 10 at max rudder bear away)
@@ -113,6 +113,24 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("BEAR_AWAY_P", 10, Sailboat, bear_away_gain, 15),
+
+    // @Param: TACK_TIME
+    // @DisplayName: Auto tacking timeout
+    // @Description: Tacks in auto mode timeout if not successfully completed within this many milliseconds
+    // @Units: ms
+    // @Range: 1000 20000
+    // @Increment: 500
+    // @User: Standard
+    AP_GROUPINFO("TACK_TIME", 11, Sailboat, tack_timeout_ms, 5000),
+
+    // @Param: TACK_ACQ
+    // @DisplayName: sailboat auto tacking accuracy
+    // @Description: Tack is considered complete when vehicle is within this many degrees of target tack angle. -1 will always use TACK_TIME not this, useful for vane transients.
+    // @Units: deg
+    // @Range: -1 20
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("TACK_ACQ", 12, Sailboat, tack_accuracy_deg, 10),
 
     AP_GROUPEND
 };
@@ -375,8 +393,8 @@ void Sailboat::handle_tack_request_acro()
 // return target heading in radians when tacking (only used in acro)
 float Sailboat::get_tack_heading_rad()
 {
-    if (fabsf(wrap_PI(tack_heading_rad - rover.ahrs.get_yaw())) < radians(SAILBOAT_TACKING_ACCURACY_DEG) ||
-       ((AP_HAL::millis() - tack_request_ms) > SAILBOAT_AUTO_TACKING_TIMEOUT_MS)) {
+    if (fabsf(wrap_PI(tack_heading_rad - rover.ahrs.get_yaw())) < radians(tack_accuracy_deg) ||
+       ((AP_HAL::millis() - tack_request_ms) > tack_timeout_ms)) {
         clear_tack();
     }
 
@@ -521,11 +539,11 @@ float Sailboat::calc_heading(float desired_heading_cd)
     // if we are tacking we maintain the target heading until the tack completes or times out
     if (currently_tacking) {
         // check if we have reached target
-        if (fabsf(wrap_PI(tack_heading_rad - rover.ahrs.get_yaw())) <= radians(SAILBOAT_TACKING_ACCURACY_DEG)) {
+        if (fabsf(wrap_PI(tack_heading_rad - rover.ahrs.get_yaw())) <= radians(tack_accuracy_deg)) {
             clear_tack();
-        } else if ((now - auto_tack_start_ms) > SAILBOAT_AUTO_TACKING_TIMEOUT_MS) {
+        } else if ((now - auto_tack_start_ms) > tack_timeout_ms) {
             // tack has taken too long
-            if ((motor_state == UseMotor::USE_MOTOR_ASSIST) && (now - auto_tack_start_ms) < (3.0f * SAILBOAT_AUTO_TACKING_TIMEOUT_MS)) {
+            if ((motor_state == UseMotor::USE_MOTOR_ASSIST) && (now - auto_tack_start_ms) < (3.0f * tack_timeout_ms)) {
                 // if we have throttle available use it for another two time periods to get the tack done
                 tack_assist = true;
             } else {

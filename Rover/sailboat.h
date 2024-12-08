@@ -112,6 +112,8 @@ private:
     AP_Float xtrack_max;
     AP_Float loit_radius;
     AP_Float bear_away_gain;
+    AP_Int16 tack_timeout_ms;
+    AP_Float tack_accuracy_deg;
 
     RC_Channel *channel_mainsail;   // rc input channel for controlling mainsail
     bool currently_tacking;         // true when sailboat is in the process of tacking to a new heading
