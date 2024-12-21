@@ -1374,7 +1374,10 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
         # cut motor 1's to efficiency
         self.progress("Cutting motor 1 to 65% efficiency")
-        self.set_parameter("SIM_ENGINE_MUL", 0.65)
+        self.set_parameters({
+            "SIM_ENGINE_MUL": 0.65,
+            "SIM_ENGINE_FAIL": 1 << 0, # motor 1
+        })
 
         while self.get_sim_time_cached() < tstart + holdtime:
             m = self.mav.recv_match(type='VFR_HUD', blocking=True)
@@ -3285,8 +3288,8 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                 self.progress("Killing motor %u (%u%%)" %
                               (fail_servo+1, fail_mul))
                 self.set_parameters({
-                    "SIM_ENGINE_FAIL": fail_servo,
                     "SIM_ENGINE_MUL": fail_mul,
+                    "SIM_ENGINE_FAIL": 1 << fail_servo,
                 })
                 failed = True
 
@@ -3345,10 +3348,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                 raise NotAchievedException("Vehicle is descending")
 
         self.progress("Fixing motors")
-        self.set_parameters({
-            "SIM_ENGINE_FAIL": 0,
-            "SIM_ENGINE_MUL": 1.0,
-        })
+        self.set_parameter("SIM_ENGINE_FAIL", 0)
 
         self.do_RTL()
 
@@ -4170,8 +4170,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.takeoff(40)
         self.set_rc(9, 1500)
         self.set_parameters({
-            "SIM_ENGINE_MUL": 0,
-            "SIM_ENGINE_FAIL": 1,
+            "SIM_ENGINE_FAIL": 1 << 1, # motor 2
         })
         self.wait_statustext('BANG! Parachute deployed', timeout=60)
         self.set_rc(9, 1000)
@@ -4184,8 +4183,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.takeoff(loiter_alt, mode='LOITER')
         self.set_rc(9, 1100)
         self.set_parameters({
-            "SIM_ENGINE_MUL": 0,
-            "SIM_ENGINE_FAIL": 1,
+            "SIM_ENGINE_FAIL": 1 << 1, # motor 2
         })
         tstart = self.get_sim_time()
         while self.get_sim_time_cached() < tstart + 5:
@@ -9464,9 +9462,6 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                 self.progress("Actually, no I'm not - it is an external simulation")
                 continue
             model = frame_bits.get("model", frame)
-            # the model string for Callisto has crap in it.... we
-            # should really have another entry in the vehicleinfo data
-            # to carry the path to the JSON.
             defaults = self.model_defaults_filepath(frame)
             if not isinstance(defaults, list):
                 defaults = [defaults]
@@ -9980,6 +9975,15 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.change_mode('SMART_RTL')
         self.change_mode('ALT_HOLD')
         self.change_mode('SMART_RTL')
+
+    def SMART_RTL_Repeat(self):
+        '''Test whether Smart RTL catches the repeat'''
+        self.takeoff(alt_min=10, mode='GUIDED')
+        self.set_rc(3, 1500)
+        self.change_mode("CIRCLE")
+        self.delay_sim_time(1300)
+        self.change_mode("SMART_RTL")
+        self.wait_disarmed()
 
     def GPSForYawCompassLearn(self):
         '''Moving baseline GPS yaw - with compass learning'''
@@ -12024,8 +12028,8 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.context_push()
         self.context_collect('STATUSTEXT')
         self.set_parameters({
-            "SIM_ENGINE_FAIL": 1,
             "SIM_ENGINE_MUL": 0.5,
+            "SIM_ENGINE_FAIL": 1 << 1, # motor 2
             "FLIGHT_OPTIONS": 4,
         })
 
@@ -12304,6 +12308,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.AP_Avoidance,
             self.SMART_RTL,
             self.SMART_RTL_EnterLeave,
+            self.SMART_RTL_Repeat,
             self.RTL_TO_RALLY,
             self.FlyEachFrame,
             self.GPSBlending,
@@ -12466,6 +12471,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             "GPSForYawCompassLearn": "Vehicle currently crashed in spectacular fashion",
             "CompassMot": "Cuases an arithmetic exception in the EKF",
             "SMART_RTL_EnterLeave": "Causes a panic",
+            "SMART_RTL_Repeat": "Currently fails due to issue with loop detection",
         }
 
 
