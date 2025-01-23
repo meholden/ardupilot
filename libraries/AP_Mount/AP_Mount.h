@@ -48,6 +48,7 @@ class AP_Mount_Scripting;
 class AP_Mount_Xacti;
 class AP_Mount_Viewpro;
 class AP_Mount_Topotek;
+class AP_Mount_CADDX;
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -69,6 +70,7 @@ class AP_Mount
     friend class AP_Mount_Xacti;
     friend class AP_Mount_Viewpro;
     friend class AP_Mount_Topotek;
+    friend class AP_Mount_CADDX;
 
 public:
     AP_Mount();
@@ -119,6 +121,9 @@ public:
 #endif
 #if HAL_MOUNT_TOPOTEK_ENABLED
         Topotek = 12,        /// Topotek gimbal using a custom serial protocol
+#endif
+#if HAL_MOUNT_CADDX_ENABLED
+        CADDX = 13,        /// CADDX gimbal using a custom serial protocol
 #endif
     };
 
@@ -316,12 +321,6 @@ private:
     AP_Mount_Backend *get_instance(uint8_t instance) const;
 
     void handle_gimbal_report(mavlink_channel_t chan, const mavlink_message_t &msg);
-#if AP_MAVLINK_MSG_MOUNT_CONFIGURE_ENABLED
-    void handle_mount_configure(const mavlink_message_t &msg);
-#endif
-#if AP_MAVLINK_MSG_MOUNT_CONTROL_ENABLED
-    void handle_mount_control(const mavlink_message_t &msg);
-#endif
 
     MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet);
     MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet);

@@ -142,7 +142,6 @@ void ModeTakeoff::update()
         plane.set_flight_stage(AP_FixedWing::FlightStage::NORMAL);
         takeoff_mode_setup = false;
     }
-
     // We update the waypoint to follow once we're past TKOFF_LVL_ALT or we
     // pass the target location. The check for target location prevents us
     // flying towards a wrong location if we can't climb.

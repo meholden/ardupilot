@@ -321,6 +321,10 @@ bool AP_Arming_Plane::arm(const AP_Arming::Method method, const bool do_arming_c
     // rising edge of delay_arming oneshot
     delay_arming = true;
 
+#if MODE_AUTOLAND_ENABLED
+    plane.mode_autoland.arm_check();
+#endif
+
     send_arm_disarm_statustext("Throttle armed");
 
     return true;
@@ -378,8 +382,11 @@ bool AP_Arming_Plane::disarm(const AP_Arming::Method method, bool do_disarm_chec
     // DO_CHANGE_SPEED commands
     plane.new_airspeed_cm = -1;
 
+#if MODE_AUTOLAND_ENABLED
+    // takeoff direction always cleared on disarm
+    plane.takeoff_state.initial_direction.initialized = false;
+#endif
     send_arm_disarm_statustext("Throttle disarmed");
-
     return true;
 }
 

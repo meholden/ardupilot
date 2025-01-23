@@ -779,7 +779,7 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
 #endif
 #if AP_AHRS_ENABLED
     case AUX_FUNC::AHRS_TYPE:
-        run_aux_function(ch_option, ch_flag, AuxFuncTriggerSource::INIT);
+        run_aux_function(ch_option, ch_flag, AuxFuncTrigger::Source::INIT, ch_in);
         break;
 #endif
     default:
@@ -977,7 +977,7 @@ bool RC_Channel::read_aux()
 #endif
 
     // debounced; undertake the action:
-    run_aux_function(_option, new_position, AuxFuncTriggerSource::RC);
+    run_aux_function(_option, new_position, AuxFuncTrigger::Source::RC, ch_in);
     return true;
 }
 
@@ -1402,12 +1402,20 @@ void RC_Channel::do_aux_function_retract_mount(const AuxSwitchPos ch_flag, const
 }
 #endif  // HAL_MOUNT_ENABLED
 
-bool RC_Channel::run_aux_function(AUX_FUNC ch_option, AuxSwitchPos pos, AuxFuncTriggerSource source)
+bool RC_Channel::run_aux_function(AUX_FUNC ch_option, AuxSwitchPos pos, AuxFuncTrigger::Source source, uint16_t source_index)
 {
 #if AP_SCRIPTING_ENABLED
     rc().set_aux_cached(ch_option, pos);
 #endif
-    const bool ret = do_aux_function(ch_option, pos);
+
+    const AuxFuncTrigger trigger {
+        func: ch_option,
+        pos: pos,
+        source: source,
+        source_index: source_index,
+    };
+
+    const bool ret = do_aux_function(trigger);
 
 #if HAL_LOGGING_ENABLED
     // @LoggerMessage: AUXF
@@ -1418,18 +1426,20 @@ bool RC_Channel::run_aux_function(AUX_FUNC ch_option, AuxSwitchPos pos, AuxFuncT
     // @Field: pos: switch position when function triggered
     // @FieldValueEnum: pos: RC_Channel::AuxSwitchPos
     // @Field: source: source of auxiliary function invocation
-    // @FieldValueEnum: source: RC_Channel::AuxFuncTriggerSource
+    // @FieldValueEnum: source: RC_Channel::AuxFuncTrigger::Source
+    // @Field: index: index within source. 0 indexed. Invalid for scripting.
     // @Field: result: true if function was successful
     AP::logger().Write(
         "AUXF",
-        "TimeUS,function,pos,source,result",
-        "s#---",
-        "F----",
-        "QHBBB",
+        "TimeUS,function,pos,source,index,result",
+        "s#----",
+        "F-----",
+        "QHBBHB",
         AP_HAL::micros64(),
         uint16_t(ch_option),
         uint8_t(pos),
         uint8_t(source),
+        source_index,
         uint8_t(ret)
     );
 #endif
@@ -1437,8 +1447,11 @@ bool RC_Channel::run_aux_function(AUX_FUNC ch_option, AuxSwitchPos pos, AuxFuncT
     return ret;
 }
 
-bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch_flag)
+bool RC_Channel::do_aux_function(const AuxFuncTrigger &trigger)
 {
+    const AUX_FUNC &ch_option = trigger.func;
+    const AuxSwitchPos &ch_flag = trigger.pos;
+
     switch (ch_option) {
 #if AP_FENCE_ENABLED
     case AUX_FUNC::FENCE:
@@ -1904,6 +1917,7 @@ void RC_Channel::init_aux()
     if (!read_3pos_switch(position)) {
         position = AuxSwitchPos::LOW;
     }
+
     init_aux_function((AUX_FUNC)option.get(), position);
 }
 
@@ -1936,6 +1950,28 @@ RC_Channel::AuxSwitchPos RC_Channel::get_aux_switch_pos() const
     UNUSED_RESULT(read_3pos_switch(position));
 
     return position;
+}
+
+// return stick gesture pos as LOW, MIDDLE, HIGH
+// this function uses different threshold values to RC_Chanel::get_aux_switch_pos()
+// to avoid glitching on the stick travel and also always honours channel reversal
+RC_Channel::AuxSwitchPos RC_Channel::get_stick_gesture_pos() const
+{
+    const uint16_t in = get_radio_in();
+    if (in <= 900 || in >= 2200) {
+        return RC_Channel::AuxSwitchPos::LOW;
+    }
+
+    // switch is reversed if 'reversed' option set on channel and switches reverse is allowed by RC_OPTIONS
+    bool switch_reversed = get_reverse();
+
+    if (in < RC_Channel::AUX_PWM_TRIGGER_LOW) {
+        return switch_reversed ? RC_Channel::AuxSwitchPos::HIGH : RC_Channel::AuxSwitchPos::LOW;
+    }
+    if (in > RC_Channel::AUX_PWM_TRIGGER_HIGH) {
+        return switch_reversed ? RC_Channel::AuxSwitchPos::LOW : RC_Channel::AuxSwitchPos::HIGH;
+    }
+    return RC_Channel::AuxSwitchPos::MIDDLE;
 }
 
 RC_Channel *RC_Channels::find_channel_for_option(const RC_Channel::AUX_FUNC option)
