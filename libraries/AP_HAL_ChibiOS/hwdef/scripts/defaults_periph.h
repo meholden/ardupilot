@@ -156,15 +156,67 @@
 #define AP_RELAY_ENABLED 0
 #endif
 
+/*
+ * sanity checks that hwdefs are up-to-date in terms of how they are
+ * trying to configure the peripheral:
+ */
 #ifdef HAL_PERIPH_ENABLE_GPS
 #error "Change 'define HAL_PERIPH_ENABLE_GPS' to 'define AP_PERIPH_GPS_ENABLED 1'"
 #endif
+#ifdef HAL_PERIPH_ENABLE_BATTERY
+#error "Change 'define HAL_PERIPH_ENABLE_BATTERY' to 'define AP_PERIPH_BATTERY_ENABLED 1'"
+#endif
+#ifdef HAL_PERIPH_ENABLE_BATTERY_BALANCE
+#error "Change 'define HAL_PERIPH_ENABLE_BATTERY_BALANCE' to 'define AP_PERIPH_BATTERY_BALANCE_ENABLED 1'"
+#endif
+#ifdef HAL_PERIPH_ENABLE_AHRS
+#error "Change 'define HAL_PERIPH_ENABLE_AHRS' to 'define AP_PERIPH_AHRS_ENABLED 1'"
+#endif
+#ifdef HAL_PERIPH_ENABLE_MAG
+#error "Change 'define HAL_PERIPH_ENABLE_MAG' to 'define AP_PERIPH_MAG_ENABLED 1'"
+#endif
+#ifdef HAL_PERIPH_ENABLE_BARO
+#error "Change 'define HAL_PERIPH_ENABLE_BARO' to 'define AP_PERIPH_BARO_ENABLED 1'"
+#endif
+#ifdef HAL_PERIPH_ENABLE_RANGEFINDER
+#error "Change 'define HAL_PERIPH_ENABLE_RANGEFINDER' to 'define AP_PERIPH_RANGEFINDER_ENABLED 1'"
+#endif
 
+/*
+ * defaults for various AP_Periph features:
+ */
+#ifndef AP_PERIPH_BATTERY_ENABLED
+#define AP_PERIPH_BATTERY_ENABLED 0
+#endif
+#ifndef AP_PERIPH_BATTERY_BALANCE_ENABLED
+#define AP_PERIPH_BATTERY_BALANCE_ENABLED 0
+#endif
 #ifndef AP_PERIPH_GPS_ENABLED
 #define AP_PERIPH_GPS_ENABLED 0
 #endif
+#ifndef AP_PERIPH_AHRS_ENABLED
+#define AP_PERIPH_AHRS_ENABLED 0
+#endif
+#ifndef AP_PERIPH_MAG_ENABLED
+#define AP_PERIPH_MAG_ENABLED 0
+#endif
+#ifndef AP_PERIPH_BARO_ENABLED
+#define AP_PERIPH_BARO_ENABLED 0
+#endif
+#ifndef AP_PERIPH_RANGEFINDER_ENABLED
+#define AP_PERIPH_RANGEFINDER_ENABLED 0
+#endif
 
+/*
+ * turning on of ArduPilot features based on which AP_Periph features
+ * are enabled:
+ */
+#define AP_BATTERY_ENABLED AP_PERIPH_BATTERY_ENABLED
 #define AP_GPS_ENABLED AP_PERIPH_GPS_ENABLED
+#define AP_AHRS_ENABLED AP_PERIPH_AHRS_ENABLED
+#define AP_COMPASS_ENABLED AP_PERIPH_MAG_ENABLED
+#define AP_BARO_ENABLED AP_PERIPH_BARO_ENABLED
+#define AP_RANGEFINDER_ENABLED AP_PERIPH_RANGEFINDER_ENABLED
 
 /*
  * GPS Backends - we selectively turn backends on.
@@ -350,11 +402,6 @@
 #define AP_BATTERY_ESC_TELEM_OUTBOUND_ENABLED 0
 #endif
 
-#define AP_BATTERY_ENABLED defined(HAL_PERIPH_ENABLE_BATTERY)
-#define AP_AHRS_ENABLED defined(HAL_PERIPH_ENABLE_AHRS)
-#define AP_COMPASS_ENABLED defined(HAL_PERIPH_ENABLE_MAG)
-#define AP_BARO_ENABLED defined(HAL_PERIPH_ENABLE_BARO)
-#define AP_RANGEFINDER_ENABLED defined(HAL_PERIPH_ENABLE_RANGEFINDER)
 #define AP_RPM_ENABLED defined(HAL_PERIPH_ENABLE_RPM)
 #define AP_RCPROTOCOL_ENABLED defined(HAL_PERIPH_ENABLE_RCIN)
 #define AP_RTC_ENABLED defined(HAL_PERIPH_ENABLE_RTC)
