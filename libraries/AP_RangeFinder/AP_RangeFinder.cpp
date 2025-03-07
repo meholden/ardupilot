@@ -203,7 +203,7 @@ void RangeFinder::convert_params(void)
   finders here. For now we won't allow for hot-plugging of
   rangefinders.
  */
-void RangeFinder::init(enum Rotation orientation_default)
+__INITFUNC__ void RangeFinder::init(enum Rotation orientation_default)
 {
     convert_params();
 
@@ -260,7 +260,7 @@ void RangeFinder::update(void)
 #endif
 }
 
-bool RangeFinder::_add_backend(AP_RangeFinder_Backend *backend, uint8_t instance, uint8_t serial_instance)
+__INITFUNC__ bool RangeFinder::_add_backend(AP_RangeFinder_Backend *backend, uint8_t instance, uint8_t serial_instance)
 {
     if (!backend) {
         return false;
@@ -282,7 +282,7 @@ bool RangeFinder::_add_backend(AP_RangeFinder_Backend *backend, uint8_t instance
 /*
   detect if an instance of a rangefinder is connected. 
  */
-void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
+__INITFUNC__ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
 {
     AP_RangeFinder_Backend_Serial *(*serial_create_fn)(RangeFinder::RangeFinder_State&, AP_RangeFinder_Params&) = nullptr;
 
@@ -307,11 +307,13 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
             addr = params[instance].address;
         }
         FOREACH_I2C(i) {
+            auto *device_ptr = hal.i2c_mgr->get_device_ptr(i, addr);
             if (_add_backend(AP_RangeFinder_MaxsonarI2CXL::detect(state[instance], params[instance],
-                                                                  hal.i2c_mgr->get_device(i, addr)),
+                                                                  device_ptr),
                              instance)) {
                 break;
             }
+            delete device_ptr;
         }
         break;
     }
@@ -345,11 +347,13 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
     case Type::TRI2C:
         if (params[instance].address) {
             FOREACH_I2C(i) {
+                auto *device_ptr = hal.i2c_mgr->get_device_ptr(i, params[instance].address);
                 if (_add_backend(AP_RangeFinder_TeraRangerI2C::detect(state[instance], params[instance],
-                                                                      hal.i2c_mgr->get_device(i, params[instance].address)),
+                                                                      device_ptr),
                                  instance)) {
                     break;
                 }
+                delete device_ptr;
             }
         }
         break;

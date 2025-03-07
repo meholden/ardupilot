@@ -4,7 +4,6 @@ Common base class for each of the autotest suites
 AP_FLAKE8_CLEAN
 
 '''
-from __future__ import print_function
 
 import abc
 import copy
@@ -7900,6 +7899,12 @@ class TestSuite(ABC):
             timeout=timeout,
             **kwargs
         )
+
+    def get_local_position_NED(self):
+        '''return a Vector3 repreesenting vehicle position relative to
+        origin in metres, NED'''
+        pos = self.assert_receive_message('LOCAL_POSITION_NED', timeout=1)
+        return Vector3(pos.x, pos.y, pos.z)
 
     def distance_to_local_position(self, local_pos, timeout=30):
         (x, y, z_down) = local_pos  # alt is *up*

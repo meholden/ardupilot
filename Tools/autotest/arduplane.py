@@ -4,7 +4,6 @@ Fly ArduPlane in SITL
 AP_FLAKE8_CLEAN
 '''
 
-from __future__ import print_function
 import copy
 import math
 import os
@@ -4243,13 +4242,20 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         '''Test AUTOLAND mode'''
         self.set_parameters({
             "AUTOLAND_DIR_OFF": 45,
+            "TERRAIN_FOLLOW": 1,
+            "AUTOLAND_CLIMB": 300,
         })
         self.customise_SITL_commandline(["--home", "-35.362938,149.165085,585,173"])
         self.context_collect('STATUSTEXT')
-        self.takeoff(alt=80, mode='TAKEOFF')
+        self.load_mission("autoland_mission.txt")
+        self.install_terrain_handlers_context()
+        self.change_mode("AUTO")
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
         self.wait_text("Autoland direction", check_context=True)
+        self.wait_waypoint(2, 2, max_dist=100)
         self.change_mode(26)
-        self.wait_disarmed(120)
+        self.wait_disarmed(400)
         self.progress("Check the landed heading matches takeoff plus offset")
         self.wait_heading(218, accuracy=5, timeout=1)
         loc = mavutil.location(-35.362938, 149.165085, 585, 218)
@@ -5184,20 +5190,20 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         '''Test Hirth EFI'''
         self.EFITest(8, "Hirth", "hirth")
 
-    def GlideSlopeThresh(self):
-        '''Test rebuild glide slope if above and climbing'''
+    def AltitudeSlopeMaxHeight(self):
+        '''Test rebuild altitude slope if above and climbing'''
 
-        # Test that GLIDE_SLOPE_THRESHOLD correctly controls re-planning glide slope
+        # Test that ALT_SLOPE_MAXHGT correctly controls re-planning altitude slope
         # in the scenario that aircraft is above planned slope and slope is positive (climbing).
         #
         #
-        #  Behaviour with GLIDE_SLOPE_THRESH = 0 (no slope replanning)
+        #  Behaviour with ALT_SLOPE_MAXHGT = 0 (no slope replanning)
         #       (2)..      __(4)
         #         |  \..__/
         #         |  __/
         #         (3)
         #
-        # Behaviour with GLIDE_SLOPE_THRESH = 5 (slope replanning when >5m error)
+        # Behaviour with ALT_SLOPE_MAXHGT = 5 (slope replanning when >5m error)
         #       (2)........__(4)
         #         |     __/
         #         |  __/
@@ -5212,9 +5218,9 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.arm_vehicle()
 
         #
-        # Initial run with GLIDE_SLOPE_THR = 5 (default).
+        # Initial run with ALT_SLOPE_MAXHGT = 5 (default).
         #
-        self.set_parameter("GLIDE_SLOPE_THR", 5)
+        self.set_parameter("ALT_SLOPE_MAXHGT", 5)
 
         # Wait for waypoint commanding rapid descent, followed by climb.
         self.wait_current_waypoint(5, timeout=1200)
@@ -5240,9 +5246,9 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.set_current_waypoint(2)
 
         #
-        # Second run with GLIDE_SLOPE_THR = 0 (no re-plan).
+        # Second run with ALT_SLOPE_MAXHGT = 0 (no re-plan).
         #
-        self.set_parameter("GLIDE_SLOPE_THR", 0)
+        self.set_parameter("ALT_SLOPE_MAXHGT", 0)
 
         # Wait for waypoint commanding rapid descent, followed by climb.
         self.wait_current_waypoint(5, timeout=1200)
@@ -6903,7 +6909,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.Hirth,
             self.MSP_DJI,
             self.SpeedToFly,
-            self.GlideSlopeThresh,
+            self.AltitudeSlopeMaxHeight,
             self.HIGH_LATENCY2,
             self.MidAirDisarmDisallowed,
             self.AerobaticsScripting,
